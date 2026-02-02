@@ -41,7 +41,7 @@ export interface Content {
 }
 
 export interface CategoryInfo {
-  id: Category;
+  id: string;
   label: string;
   description: string;
   icon: string;
