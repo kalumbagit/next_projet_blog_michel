@@ -13,28 +13,33 @@ interface HomeClientProps {
 }
 
 export function HomeClient({ categories, contents }: HomeClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+  const [selectedCategory, setSelectedCategory] = useState<CategoryInfo | null>(
     null,
   );
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
 
   // Filtrage côté client (simple et efficace)
   const filteredContents = selectedCategory
-    ? contents.filter((c) => c.category === selectedCategory)
+    ? contents.filter((c) => c.category === selectedCategory.id)
     : contents;
 
-  const handleCategorySelect = (category: Category | null) => {
-    setSelectedCategory(category);
-  };
+  const handleCategorySelect = (categoryId: string | null) => {
+  if (!categoryId) {
+    setSelectedCategory(null);
+    return;
+  }
 
-  
+  const cat = categories.find((c) => c.id === categoryId) ?? null;
+  setSelectedCategory(cat);
+};
+
 
   return (
     <>
       {/* Category Menu */}
       <CategoryMenu
         categories={categories}
-        selectedCategory={selectedCategory}
+        selectedCategory={selectedCategory ? selectedCategory.id as Category: null}
         onSelectCategory={handleCategorySelect}
       />
 
@@ -43,12 +48,12 @@ export function HomeClient({ categories, contents }: HomeClientProps) {
         <div className="mb-8">
           <h2 className="text-3xl font-serif font-bold text-foreground mb-2">
             {selectedCategory
-              ? categories.find((c) => c.id === selectedCategory)?.label
+              ? categories.find((c) => c.id === selectedCategory.id)?.label
               : "Tous les contenus"}
           </h2>
           <p className="text-muted-foreground">
             {selectedCategory
-              ? categories.find((c) => c.id === selectedCategory)?.description
+              ? categories.find((c) => c.id === selectedCategory.id)?.description
               : "Explorez tous mes contenus, vidéos, podcasts et articles"}
           </p>
         </div>

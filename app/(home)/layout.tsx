@@ -5,7 +5,7 @@ interface HomeLayoutProps {
   children: ReactNode;
 }
 
-export  function HomeLayout({ children }: HomeLayoutProps) {
+export default function HomeLayout({ children }: HomeLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Main content injected by page.tsx */}

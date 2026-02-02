@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 interface CategoryMenuProps {
   categories: CategoryInfo[];
   selectedCategory: Category | null;
-  onSelectCategory: (category: Category | null) => void;
+  onSelectCategory: (category: string | null) => void;
 }
 
 export function CategoryMenu({

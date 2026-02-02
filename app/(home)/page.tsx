@@ -22,7 +22,7 @@ function parseJsonArray<T>(value: unknown): T[] {
   return [];
 }
 
-export  async function HomePage() {
+export default async function HomePage() {
   const [categories, rawContents] = await Promise.all([
     contentService.getCategories(),
     contentService.getContents(),
