@@ -1,84 +1,125 @@
 "use server";
 
-import { Profile } from "@/app/lib";
-import { contentService } from "@/app/lib/contentService";
-import fs from "fs";
-import path from "path";
+
 import { b2Service } from "./s3_service";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { Profile } from "@/app/lib/index";
+import { contentService } from "@/app/lib/contentService";
 
-export async function updateProfileAction(formData: FormData): Promise<void> {
+
+
+export async function updateProfileAction(formData: Profile, imageFile?: File) {
   try {
-    // récupération du fichier image (si présent)
-    const imageFile = formData.get("image");
+    let profileUrl = formData.imageUrl;
 
-    let imageUrl = String(formData.get("imageUrl") || "").trim();
+    // Si une nouvelle image est fournie, l'uploader
+    if (imageFile) {
+      // Générer un nom de fichier unique
+      const timestamp = Date.now();
+      const fileName = `profiles/${timestamp}-${imageFile.name}`;
 
-    if (imageFile instanceof File && imageFile.size > 0) {
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const fileName = `profiles/${Date.now()}-${imageFile.name}`;
-      imageUrl = await b2Service.uploadFile(fileName, buffer);
+      try {
+        // Convertir le File en Buffer
+      const arrayBuffer = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Upload vers B2
+      profileUrl = await b2Service.uploadFile(fileName, buffer);
+      } catch (error) {
+          throw (`${error} cette erreur est lié au service S3`)
+      }
+
+      // Optionnel: supprimer l'ancienne image si elle existe
+      if (formData.imageUrl && formData.imageUrl.startsWith("http")) {
+        try {
+          // Extraire le nom du fichier de l'ancienne URL
+          const oldFileName = formData.imageUrl.split("/").pop();
+          if (oldFileName) {
+            await b2Service.deleteFile(oldFileName);
+          }
+        } catch (error) {
+          console.error("Erreur lors de la suppression de l'ancienne image:", error);
+          // Continue même si la suppression échoue
+        }
+      }
     }
 
-    const profileData: Partial<Profile> = {
-      firstName: String(formData.get("firstName") || "").trim(),
-      lastName: String(formData.get("lastName") || "").trim(),
-      title: String(formData.get("title") || "").trim(),
-      bio: String(formData.get("bio") || "").trim(),
-      imageUrl,
-      formations: JSON.parse(String(formData.get("formations") || "[]")),
-      motivations: JSON.parse(String(formData.get("motivations") || "[]")),
-      socialLinks: {
-        twitter: String(formData.get("twitter") || "") || undefined,
-        linkedin: String(formData.get("linkedin") || "") || undefined,
-        email: String(formData.get("email") || "") || undefined,
+    // Ici, sauvegarder les données dans votre base de données
+    formData.imageUrl=profileUrl
+
+    await contentService.updateProfile(formData)
+    
+
+    // Revalider le cache de la page
+    revalidatePath("/admin/profil");
+    revalidatePath("/admin/profil/edit");
+
+    return {
+      success: true,
+      data: {
+        ...formData,
+        profileUrl,
       },
     };
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du profil:", error);
+    return {
+      success: false,
+      error: "Impossible de mettre à jour le profil",
+    };
+  }
+}
 
-    if (
-      !profileData.firstName ||
-      !profileData.lastName ||
-      !profileData.title ||
-      !profileData.bio
-    ) {
-      throw new Error("Champs obligatoires manquants");
+export async function createProfile(formData: FormData, imageFile?: File) {
+  try {
+    let profileUrl = "/images/default-avatar.png";
+
+    // Si une image est fournie, l'uploader
+    if (imageFile) {
+      const timestamp = Date.now();
+      const fileName = `profiles/${timestamp}-${imageFile.name}`;
+
+      const arrayBuffer = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      profileUrl = await b2Service.uploadFile(fileName, buffer);
     }
 
-    // update dans la base de données
-    await contentService.updateProfile(profileData);
+    // Sauvegarder le nouveau profil dans la base de données
+    /*
+    const newProfile = await prisma.profile.create({
+      data: {
+        nom: formData.nom,
+        email: formData.email,
+        profileUrl: profileUrl,
+        motivations: {
+          create: formData.motivations.map((m) => ({ texte: m.texte })),
+        },
+        formations: {
+          create: formData.formations.map((f) => ({
+            titre: f.titre,
+            etablissement: f.etablissement,
+            annee: f.annee,
+          })),
+        },
+      },
+    });
+    */
 
-    // 🔄 revalider le cache de la page admin/profil
-    revalidatePath("/admin/profil");
+    revalidatePath("/profile");
 
-    // 🔀 rediriger vers /admin/profil
-    redirect("/admin/profil");
-
+    return {
+      success: true,
+      data: {
+        ...formData,
+        profileUrl,
+      },
+    };
   } catch (error) {
-    try {
-      const logsDir = path.join(process.cwd(), "logs");
-      if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir);
-
-      const logFile = path.join(logsDir, `profile-error-${Date.now()}.log`);
-      fs.writeFileSync(
-        logFile,
-        JSON.stringify(
-          {
-            timestamp: new Date().toISOString(),
-            formData: Object.fromEntries(formData.entries()),
-            error:
-              error instanceof Error
-                ? { message: error.message, stack: error.stack }
-                : error,
-          },
-          null,
-          2
-        ),
-        "utf-8"
-      );
-    } catch {}
-
-    // ici on peut lancer une erreur pour que Next affiche une page d'erreur
-    throw error;
+    console.error("Erreur lors de la création du profil:", error);
+    return {
+      success: false,
+      error: "Impossible de créer le profil",
+    };
   }
 }

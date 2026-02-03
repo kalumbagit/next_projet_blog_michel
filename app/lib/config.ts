@@ -18,3 +18,4 @@ export const b2 = new B2({
 export async function initB2() {
   await b2.authorize(); // ça récupère les tokens temporaires
 }
+ 

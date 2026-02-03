@@ -1,80 +1,128 @@
 import { b2, initB2 } from "./config";
-import fs from "fs";
+
+let uploadUrl: string | null = null;
+let uploadAuthToken: string | null = null;
+
+async function ensureUploadReady() {
+  if (uploadUrl && uploadAuthToken) return;
+
+  await initB2();
+
+  const res = await b2.getUploadUrl({
+    bucketId: process.env.B2_BUCKET_ID!,
+  });
+
+  uploadUrl = res.data.uploadUrl;
+  uploadAuthToken = res.data.authorizationToken;
+}
 
 export const b2Service = {
   /**
-   * Upload un fichier depuis un Buffer, Uint8Array ou string
-   * @param fileName nom du fichier dans le bucket
-   * @param fileData Buffer / string / Uint8Array
-   * @returns URL publique si bucket public
+   * Upload un fichier
    */
   async uploadFile(
     fileName: string,
     fileData: Buffer | Uint8Array | string,
   ): Promise<string> {
+    try {
+      await ensureUploadReady();
+
+      await b2.uploadFile({
+        uploadUrl: uploadUrl!,
+        uploadAuthToken: uploadAuthToken!,
+        fileName,
+        data: fileData,
+      });
+
+      return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
+    } catch (error) {
+      console.error("Erreur lors de l'upload:", error);
+      throw new Error(`Impossible d'uploader le fichier ${fileName}`);
+    }
+  },
+
+  /**
+   * Construit l'URL publique
+   */
+  async getFileUrl(source: string): Promise<string> {
+    if (source.startsWith("http://") || source.startsWith("https://")) {
+      return source;
+    }
+
+    return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${source}`;
+  },
+
+  /**
+   * Télécharge un fichier
+   */
+  async downloadFile(source: string): Promise<Buffer> {
+    const url = await this.getFileUrl(source);
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error(`Erreur HTTP: ${res.status}`);
+    }
+
+    return Buffer.from(await res.arrayBuffer());
+  },
+
+  /**
+   * Supprime un fichier
+   */
+  async deleteFile(fileName: string): Promise<void> {
     await initB2();
 
-    const response = await b2.uploadFile({
-      bucketId: process.env.B2_BUCKET_NAME!,
+    const fileId = await this.getFileId(fileName);
+
+    await b2.deleteFileVersion({
       fileName,
-      data: fileData,
+      fileId,
     });
-
-    return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
   },
 
   /**
-   * Upload depuis un fichier local (chemin)
+   * Récupère le fileId
    */
-  async uploadFileFromPath(localPath: string, destPath: string) {
-    const buffer = fs.readFileSync(localPath);
-    return this.uploadFile(destPath, buffer);
-  },
-
-  /**
-   * Supprime un fichier du bucket
-   * @param fileName nom du fichier
-   */
-  async deleteFile(fileName: string) {
-    await initB2();
-    const response = await b2.deleteFileVersion({
-      fileName,
-      fileId: await this.getFileId(fileName),
-    });
-    return response;
-  },
-
-  /**
-   * Récupère le fileId d'un fichier existant
-   * nécessaire pour deleteFile
-   */
-  async getFileId(fileName: string) {
+  async getFileId(fileName: string): Promise<string> {
     await initB2();
 
     const list = await b2.listFileNames({
-      bucketId: process.env.B2_BUCKET_NAME!,
+      bucketId: process.env.B2_BUCKET_ID!, // ✅ ID, pas NAME
       startFileName: fileName,
       maxFileCount: 1,
     });
 
-    // Typage minimal pour supprimer l'erreur TS7006
     const file = list.data.files.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: { fileName: string; fileId: string }) => f.fileName === fileName,
     );
 
-    if (!file) throw new Error(`File ${fileName} not found`);
+    if (!file) {
+      throw new Error(`Fichier ${fileName} introuvable`);
+    }
+
     return file.fileId;
   },
 
   /**
-   * Liste les fichiers dans un bucket
-   * @param prefix optionnel : filtrer par chemin / dossier
+   * Vérifie l'existence
+   */
+  async fileExists(fileName: string): Promise<boolean> {
+    try {
+      await this.getFileId(fileName);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Liste les fichiers
    */
   async listFiles(prefix?: string) {
     await initB2();
+
     const list = await b2.listFileNames({
-      bucketId: process.env.B2_BUCKET_NAME!,
+      bucketId: process.env.B2_BUCKET_ID!, // ✅
       startFileName: prefix,
       maxFileCount: 1000,
     });
@@ -83,31 +131,19 @@ export const b2Service = {
   },
 
   /**
-   * Génère une URL temporaire pour un fichier privé
-   * @param fileName nom du fichier
-   * @param validDuration duration en secondes
+   * URL signée (bucket privé)
    */
-  async getSignedUrl(fileName: string, validDuration = 3600) {
+  async getSignedUrl(fileName: string, validDuration = 3600): Promise<string> {
     await initB2();
+
     const response = await b2.getDownloadAuthorization({
-      bucketId: process.env.B2_BUCKET_NAME!,
+      bucketId: process.env.B2_BUCKET_ID!, // ✅
       fileNamePrefix: fileName,
       validDurationInSeconds: validDuration,
     });
 
     const token = response.data.authorizationToken;
-    return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}?Authorization=${token}`;
-  },
 
-  /**
-   * Télécharge un fichier depuis le bucket
-   * @param fileName nom du fichier
-   * @returns Buffer
-   */
-  async downloadFile(fileName: string) {
-    const url = `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Erreur téléchargement fichier ${fileName}`);
-    return Buffer.from(await res.arrayBuffer());
+    return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}?Authorization=${token}`;
   },
 };
