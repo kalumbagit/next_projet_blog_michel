@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { Profile } from "@/app/lib/index";
-import { b2Service } from "@/app/lib/s3_service";
 
 import { updateProfileAction } from "@/app/lib/actions";
 
