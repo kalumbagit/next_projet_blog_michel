@@ -1,4 +1,4 @@
-import { AppData, CategoryInfo, Content, Profile } from '@/app/lib/index';
+import { AppData, CategoryInfo, Content, Profile } from './types';
 
 export const profile: Profile = {
   id: '1',

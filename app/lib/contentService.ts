@@ -1,5 +1,3 @@
-
-
 import { sql } from "@/app/lib/config";
 import { Category, Content, Profile, CategoryInfo } from "@/app/lib";
 
@@ -288,6 +286,154 @@ export const contentService = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (r: any) => [r.category, Number(r.count)])
       ),
+    };
+  },
+
+  // ==========================================================================
+  // VIEWS (VUES) - Nouvelles méthodes ajoutées
+  // ==========================================================================
+
+  async getContentViews(contentId: string): Promise<number> {
+    const [result] = await sql<{ views: number }[]>`
+      select views
+      from content_views
+      where content_id = ${contentId}
+    `;
+    return result?.views ?? 0;
+  },
+
+  async getAllContentViews(): Promise<Record<string, number>> {
+    const results = await sql<{ content_id: string; views: number }[]>`
+      select content_id as "contentId", views
+      from content_views
+    `;
+    return Object.fromEntries(
+      results.map((r) => [r.content_id, r.views])
+    );
+  },
+
+  async incrementContentViews(contentId: string): Promise<number> {
+    const [updated] = await sql<{ views: number }[]>`
+      insert into content_views (content_id, views)
+      values (${contentId}, 1)
+      on conflict (content_id)
+      do update set views = content_views.views + 1
+      returning views
+    `;
+    return updated?.views ?? 1;
+  },
+
+  async setContentViews(contentId: string, views: number): Promise<number> {
+    const [updated] = await sql<{ views: number }[]>`
+      insert into content_views (content_id, views)
+      values (${contentId}, ${views})
+      on conflict (content_id)
+      do update set views = ${views}
+      returning views
+    `;
+    return updated?.views ?? views;
+  },
+
+  async getContentsWithViews(): Promise<Array<Content & { views: number }>> {
+    const contents = await sql<Array<Content & { views: number }>>`
+      select
+        c.id,
+        c.title,
+        c.description,
+        c.type,
+        c.category,
+        c.media_url as "mediaUrl",
+        c.thumbnail_url as "thumbnailUrl",
+        c.transcription,
+        c.text_content as "textContent",
+        c.duration,
+        c.published_at as "publishedAt",
+        c.tags,
+        c.created_at as "createdAt",
+        coalesce(cv.views, 0) as views
+      from contents c
+      left join content_views cv on c.id = cv.content_id
+      order by c.created_at desc
+    `;
+    return contents;
+  },
+
+  async getTopViewedContents(limit: number = 10): Promise<Array<Content & { views: number }>> {
+    const contents = await sql<Array<Content & { views: number }>>`
+      select
+        c.id,
+        c.title,
+        c.description,
+        c.type,
+        c.category,
+        c.media_url as "mediaUrl",
+        c.thumbnail_url as "thumbnailUrl",
+        c.transcription,
+        c.text_content as "textContent",
+        c.duration,
+        c.published_at as "publishedAt",
+        c.tags,
+        c.created_at as "createdAt",
+        coalesce(cv.views, 0) as views
+      from contents c
+      left join content_views cv on c.id = cv.content_id
+      order by views desc
+      limit ${limit}
+    `;
+    return contents;
+  },
+
+  async getTotalViews(): Promise<number> {
+    const [result] = await sql<{ total: number }[]>`
+      select coalesce(sum(views), 0) as total
+      from content_views
+    `;
+    return result?.total ?? 0;
+  },
+
+  // ==========================================================================
+  // VISITORS - Nouvelles méthodes pour les visiteurs
+  // ==========================================================================
+
+  async getTotalVisitors(): Promise<number> {
+    const [result] = await sql<{ count: number }[]>`
+      select count(distinct visitor_id) as count
+      from visitor_sessions
+      where created_at >= current_date - interval '30 days'
+    `;
+    return result?.count ?? 0;
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async recordVisitor(visitorId: string, metadata?: Record<string, any>): Promise<void> {
+    await sql`
+      insert into visitor_sessions (visitor_id, metadata, created_at)
+      values (${visitorId}, ${JSON.stringify(metadata ?? {})}, now())
+    `;
+  },
+
+  async getVisitorStats(days: number = 30): Promise<{
+    total: number;
+    daily: Array<{ date: string; count: number }>;
+  }> {
+    const [total] = await sql<{ count: number }[]>`
+      select count(distinct visitor_id) as count
+      from visitor_sessions
+      where created_at >= current_date - interval '${days} days'
+    `;
+
+    const daily = await sql<Array<{ date: string; count: number }>>`
+      select
+        date(created_at) as date,
+        count(distinct visitor_id) as count
+      from visitor_sessions
+      where created_at >= current_date - interval '${days} days'
+      group by date(created_at)
+      order by date desc
+    `;
+
+    return {
+      total: total?.count ?? 0,
+      daily,
     };
   },
 };

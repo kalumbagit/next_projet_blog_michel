@@ -5,26 +5,19 @@ import { contentService } from "@/app/lib/contentService";
 import fs from "fs";
 import path from "path";
 import { b2Service } from "./s3_service";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-export async function updateProfileAction(
-  _prevState: unknown,
-  formData: FormData,
-): Promise<{ success: boolean; error?: string }> {
+export async function updateProfileAction(formData: FormData): Promise<void> {
   try {
-    // 👉 récupération du fichier image (si présent)
+    // récupération du fichier image (si présent)
     const imageFile = formData.get("image");
 
     let imageUrl = String(formData.get("imageUrl") || "").trim();
 
-    // 👉 si une nouvelle image est transmise, on l’envoie au service
     if (imageFile instanceof File && imageFile.size > 0) {
-      // Convertir le File en Buffer pour B2
       const buffer = Buffer.from(await imageFile.arrayBuffer());
-
-      // Créer un nom unique pour le fichier
       const fileName = `profiles/${Date.now()}-${imageFile.name}`;
-
-      // Appel correct de b2Service
       imageUrl = await b2Service.uploadFile(fileName, buffer);
     }
 
@@ -52,17 +45,21 @@ export async function updateProfileAction(
       throw new Error("Champs obligatoires manquants");
     }
 
+    // update dans la base de données
     await contentService.updateProfile(profileData);
 
-    return { success: true };
+    // 🔄 revalider le cache de la page admin/profil
+    revalidatePath("/admin/profil");
+
+    // 🔀 rediriger vers /admin/profil
+    redirect("/admin/profil");
+
   } catch (error) {
-    // 🧾 log fichier
     try {
       const logsDir = path.join(process.cwd(), "logs");
       if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir);
 
       const logFile = path.join(logsDir, `profile-error-${Date.now()}.log`);
-
       fs.writeFileSync(
         logFile,
         JSON.stringify(
@@ -75,12 +72,13 @@ export async function updateProfileAction(
                 : error,
           },
           null,
-          2,
+          2
         ),
-        "utf-8",
+        "utf-8"
       );
     } catch {}
 
-    return { success: false, error: "UPDATE_PROFILE_FAILED" };
+    // ici on peut lancer une erreur pour que Next affiche une page d'erreur
+    throw error;
   }
 }

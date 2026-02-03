@@ -68,6 +68,7 @@ const config: Config = {
       animation: {
         "fade-in": "fade-in 0.5s ease-out",
         "slide-in": "slide-in 0.4s ease-out",
+        'spin-slow': 'spin 3s linear infinite',
         pulse: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
       },
     },
