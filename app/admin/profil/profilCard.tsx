@@ -47,7 +47,7 @@ export default async function ProfileCardServer() {
       <div className="h-48 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 relative">
         {profile.imageUrl && (
           <Image
-            src={profile.imageUrl}
+            src={"/lib/routes/profil"}
             alt={`${profile.firstName} ${profile.lastName}`}
             fill
             className="object-cover opacity-30"

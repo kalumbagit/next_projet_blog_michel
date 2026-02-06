@@ -6,7 +6,6 @@ import { Category, Content, Profile, CategoryInfo } from "@/app/lib";
 // ============================================================================
 
 export const contentService = {
-
   // ==========================================================================
   // PROFILE
   // ==========================================================================
@@ -66,7 +65,7 @@ export const contentService = {
     `;
   },
 
-  async getCategoryById(id: Category): Promise<CategoryInfo | undefined> {
+  async getCategoryById(id: string): Promise<CategoryInfo | undefined> {
     const [category] = await sql<CategoryInfo[]>`
       select * from categories where id = ${id}
     `;
@@ -88,8 +87,8 @@ export const contentService = {
   },
 
   async updateCategory(
-    id: Category,
-    data: Partial<CategoryInfo>
+    id: string,
+    data: Partial<CategoryInfo>,
   ): Promise<CategoryInfo | null> {
     const result = await sql<CategoryInfo[]>`
       update categories
@@ -100,7 +99,7 @@ export const contentService = {
     return result[0] ?? null;
   },
 
-  async deleteCategory(id: Category): Promise<boolean> {
+  async deleteCategory(id: string): Promise<boolean> {
     const used = await sql`
       select 1 from contents where category = ${id} limit 1
     `;
@@ -188,7 +187,9 @@ export const contentService = {
     `;
   },
 
-  async createContent(data: Omit<Content, "id" | "createdAt">): Promise<Content> {
+  async createContent(
+    data: Omit<Content, "id" | "createdAt">,
+  ): Promise<Content> {
     const [created] = await sql<Content[]>`
       insert into contents (
         id,
@@ -225,7 +226,7 @@ export const contentService = {
 
   async updateContent(
     id: string,
-    data: Partial<Content>
+    data: Partial<Content>,
   ): Promise<Content | null> {
     const result = await sql<Content[]>`
       update contents
@@ -279,12 +280,14 @@ export const contentService = {
       contentsByType: Object.fromEntries(
         byType.map(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (r: any) => [r.type, Number(r.count)])
+          (r: any) => [r.type, Number(r.count)],
+        ),
       ),
       contentsByCategory: Object.fromEntries(
         byCategory.map(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (r: any) => [r.category, Number(r.count)])
+          (r: any) => [r.category, Number(r.count)],
+        ),
       ),
     };
   },
@@ -307,9 +310,7 @@ export const contentService = {
       select content_id as "contentId", views
       from content_views
     `;
-    return Object.fromEntries(
-      results.map((r) => [r.content_id, r.views])
-    );
+    return Object.fromEntries(results.map((r) => [r.content_id, r.views]));
   },
 
   async incrementContentViews(contentId: string): Promise<number> {
@@ -358,7 +359,9 @@ export const contentService = {
     return contents;
   },
 
-  async getTopViewedContents(limit: number = 10): Promise<Array<Content & { views: number }>> {
+  async getTopViewedContents(
+    limit: number = 10,
+  ): Promise<Array<Content & { views: number }>> {
     const contents = await sql<Array<Content & { views: number }>>`
       select
         c.id,
@@ -403,8 +406,11 @@ export const contentService = {
     `;
     return result?.count ?? 0;
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async recordVisitor(visitorId: string, metadata?: Record<string, any>): Promise<void> {
+  async recordVisitor(
+    visitorId: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    metadata?: Record<string, any>,
+  ): Promise<void> {
     await sql`
       insert into visitor_sessions (visitor_id, metadata, created_at)
       values (${visitorId}, ${JSON.stringify(metadata ?? {})}, now())

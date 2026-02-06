@@ -30,7 +30,7 @@ export interface Content {
   title: string;
   description: string;
   type: ContentType;
-  category: Category;
+  category: string;
   mediaUrl?: string;
   thumbnailUrl?: string;
   transcription?: string;

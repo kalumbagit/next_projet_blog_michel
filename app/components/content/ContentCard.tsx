@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Content } from "@/app/lib/index";
 import { motion } from "framer-motion";
 import { Play, Headphones, FileText, Clock, Calendar } from "lucide-react";
@@ -31,6 +32,20 @@ const typeColors = {
 export function ContentCard({ content, onSelect, index }: ContentCardProps) {
   const Icon = typeIcons[content.type];
 
+  // Assure que tags est un tableau
+  let tags: string[] = [];
+  if (typeof content.tags === "string") {
+    try {
+      const parsed = JSON.parse(content.tags);
+      tags = Array.isArray(parsed) ? parsed : Object.keys(parsed);
+    } catch (e) {
+      console.log("Échec de la parsing des tags pour le contenu", content.id,"voici l'erreur :", e);
+      tags = [content.tags];
+    }
+  } else if (Array.isArray(content.tags)) {
+    tags = content.tags;
+  }
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 20 }}
@@ -43,9 +58,21 @@ export function ContentCard({ content, onSelect, index }: ContentCardProps) {
       {/* Thumbnail area */}
       <div className="relative h-48 overflow-hidden bg-gray-800">
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent z-10" />
-        <div className="w-full h-full flex items-center justify-center bg-gray-700">
-          <Icon className="w-16 h-16 text-gray-500/30" />
-        </div>
+
+        {content.id ? (
+          <Image
+            src={`/lib/routes/thumail/${content.id}`}
+            alt="Thumbnail"
+            fill
+            style={{ objectFit: "cover" }}
+            loader={({ src }) => src} // permet d’utiliser l’URL telle quelle
+            className="z-0"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-700 z-0">
+            <Icon className="w-16 h-16 text-gray-500/30" />
+          </div>
+        )}
 
         {/* Type badge */}
         <div className="absolute top-4 left-4 z-20">
@@ -103,7 +130,7 @@ export function ContentCard({ content, onSelect, index }: ContentCardProps) {
 
           {/* Tags */}
           <div className="flex gap-1.5">
-            {content.tags.slice(0, 2).map((tag) => (
+            {tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
                 className="px-2 py-0.5 rounded-md bg-gray-700 text-xs text-gray-400"

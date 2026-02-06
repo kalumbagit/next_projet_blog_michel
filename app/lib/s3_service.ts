@@ -34,10 +34,33 @@ export const b2Service = {
         data: fileData,
       });
 
-      return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
-    } catch (error) {
-      console.error("Erreur lors de l'upload:", error);
-      throw new Error(`Impossible d'uploader le fichier ${fileName}`);
+      return `https://f003.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Erreur complète lors de l'upload :", error);
+
+      // Si c'est un AggregateError (Backblaze B2 SDK peut renvoyer ça)
+      if (error instanceof AggregateError) {
+        console.error("Liste des erreurs :", error.errors);
+      }
+
+      // Si c'est un AxiosError
+      if (error.isAxiosError) {
+        console.error("Détails Axios :", {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          headers: error.response?.headers,
+          data: error.response?.data,
+        });
+      }
+
+      // Remonter l'erreur complète dans le throw
+      throw new Error(
+        `Impossible d'uploader le fichier ${fileName}. Détails: ${
+          error.message || JSON.stringify(error)
+        }`,
+      );
     }
   },
 
@@ -57,7 +80,8 @@ export const b2Service = {
    */
   async downloadFile(source: string): Promise<Buffer> {
     const url = await this.getFileUrl(source);
-    const res = await fetch(url);
+    const signedUrl = await this.getSignedUrl(url);
+    const res = await fetch(signedUrl);
 
     if (!res.ok) {
       throw new Error(`Erreur HTTP: ${res.status}`);
@@ -133,8 +157,18 @@ export const b2Service = {
   /**
    * URL signée (bucket privé)
    */
-  async getSignedUrl(fileName: string, validDuration = 3600): Promise<string> {
+  async getSignedUrl(uri: string, validDuration = 86400): Promise<string> {
     await initB2();
+
+    // Si l'URI est une URL complète, on extrait le fileName
+    let fileName = uri;
+    const bucketUrl = `https://f003.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/`;
+    if (uri.startsWith("http://") || uri.startsWith("https://")) {
+      if (!uri.includes(bucketUrl)) {
+        throw new Error(`L'URL ne correspond pas au bucket attendu : ${uri}`);
+      }
+      fileName = uri.split(bucketUrl)[1];
+    }
 
     const response = await b2.getDownloadAuthorization({
       bucketId: process.env.B2_BUCKET_ID!, // ✅
@@ -144,6 +178,6 @@ export const b2Service = {
 
     const token = response.data.authorizationToken;
 
-    return `https://f000.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}?Authorization=${token}`;
+    return `https://f003.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}?Authorization=${token}`;
   },
 };

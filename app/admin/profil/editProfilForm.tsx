@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { updateProfileAction } from "@/app/lib/actions";
 import type { Profile } from "@/app/lib/index";
-// cet import recupere le media associé pour l'afficher en previsualisation
-import { b2Service } from "@/app/lib/s3_service";
 
 // Types pour les champs complexes
 
@@ -15,7 +14,11 @@ interface EditProfileFormProps {
 }
 
 export default function EditProfileForm({ profile }: EditProfileFormProps) {
+
+  const router = useRouter();
+  
   // Normalisation des tableaux venant du backend
+
   function normalizeArray(value: unknown): string[] {
     if (Array.isArray(value)) return value;
     if (typeof value === "string") {
@@ -39,7 +42,7 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
   // États pour la soumission et image
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(
-    profile.imageUrl ?? "/profile.jpg",
+    profile.imageUrl ? "/lib/routes/profil" : "/profile.jpg",
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -106,12 +109,16 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
         },
       };
 
-      const result = await updateProfileAction(profileFromForm, profileImage ?? undefined);
+      const result = await updateProfileAction(
+        profileFromForm,
+        profileImage ?? undefined,
+      );
 
       if (!result.success) {
         console.error("Erreur serveur:", result.error);
       } else {
-        console.log("Profil mis à jour:", result.data);
+         // ⚡ Redirection après succès
+        router.push("/admin/profil");
       }
     } catch (error) {
       console.error("Erreur lors de la soumission:", error);
@@ -119,10 +126,6 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
       setIsSubmitting(false);
     }
   };
-
-
-  console.log("################################################################")
-  console.log(profile.imageUrl)
 
   return (
     <form
@@ -139,7 +142,7 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
               alt="Photo de profil"
               fill
               className="object-cover"
-              onError={() => setPreviewUrl(profile.imageUrl)}
+              onError={() => setPreviewUrl("/lib/routes/profil")}
             />
           </div>
           <input

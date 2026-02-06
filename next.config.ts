@@ -1,15 +1,34 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-   images: {
+  images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "f000.backblazeb2.com",
+        hostname: "f003.backblazeb2.com",
         pathname: "/file/**",
       },
     ],
+    localPatterns: [
+      // Thumbnails dynamiques
+      {
+        // un segment dynamique obligatoire
+        pathname: "/lib/routes/thumail/:id",
+      },
+      // Vidéos dynamiques
+      {
+        pathname: "/lib/routes/video/:id",
+      },
+      // Profil (optionnel)
+      {
+        pathname: "/lib/routes/profil",
+      },
+    ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "500mb",
+    },
   },
 };
 

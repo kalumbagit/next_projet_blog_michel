@@ -28,7 +28,7 @@ export async function ProfileSection() {
           <div className="relative">
             <div className="w-40 h-40 md:w-52 md:h-52 rounded-full overflow-hidden border-4 border-yellow-500/30 shadow-[0_0_40px_rgba(245,200,60,0.15)] relative">
               <Image
-                src={profile.imageUrl}
+                src={"/lib/routes/profil"}
                 alt={`${profile.firstName} ${profile.lastName}`}
                 fill
                 className="object-cover"

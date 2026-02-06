@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Content } from "@/app/lib/index";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Play, Headphones, BookOpen, Clock } from "lucide-react";
+import Image from "next/image";
 
 interface ContentViewerProps {
   content: Content;
@@ -14,7 +15,21 @@ type ViewMode = "media" | "transcription";
 
 export function ContentViewer({ content, onClose }: ContentViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("media");
+  const [isPlaying, setIsPlaying] = useState(false);
   const hasTranscription = content.transcription || content.textContent;
+
+  // Parse tags
+  let parsedTags: string[] = [];
+  if (typeof content.tags === "string") {
+    try {
+      const obj = JSON.parse(content.tags);
+      parsedTags = Array.isArray(obj) ? obj : Object.keys(obj);
+    } catch {
+      parsedTags = [content.tags];
+    }
+  } else if (Array.isArray(content.tags)) {
+    parsedTags = content.tags;
+  }
 
   return (
     <AnimatePresence>
@@ -88,17 +103,43 @@ export function ContentViewer({ content, onClose }: ContentViewerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
+            {/* Video / Thumbnail */}
             {content.type === "video" && viewMode === "media" && (
               <div className="aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-lg mb-8 flex items-center justify-center">
-                <div className="text-center">
-                  <Play className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                  <p className="text-gray-400">
-                    Lecteur vidéo (URL: {content.mediaUrl})
-                  </p>
-                </div>
+                {!isPlaying ? (
+                  <div
+                    className="w-full h-full relative cursor-pointer"
+                    onClick={() => setIsPlaying(true)}
+                  >
+                    {content.thumbnailUrl ? (
+                      <Image
+                        src={`/lib/routes/thumail/${content.id}`}
+                        alt="Thumbnail"
+                        fill
+                        style={{ objectFit: "cover" }}
+                        loader={({ src }) => src} 
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                        <Play className="w-16 h-16 text-yellow-500" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Play className="w-16 h-16 text-yellow-500" />
+                    </div>
+                  </div>
+                ) : (
+                  <video
+                    src={`/lib/routes/video/${content.id}`}
+                    controls
+                    autoPlay
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
             )}
 
+            {/* Audio */}
             {content.type === "audio" && viewMode === "media" && (
               <div className="bg-gray-900 rounded-xl p-8 border border-gray-700 shadow-lg mb-8">
                 <div className="flex items-center gap-6">
@@ -120,6 +161,7 @@ export function ContentViewer({ content, onClose }: ContentViewerProps) {
               </div>
             )}
 
+            {/* Text / Transcription */}
             {(content.type === "text" || viewMode === "transcription") && (
               <div className="bg-gray-900 rounded-xl p-8 border border-gray-700 shadow-lg">
                 <article className="prose prose-invert prose-lg max-w-none">
@@ -147,7 +189,7 @@ export function ContentViewer({ content, onClose }: ContentViewerProps) {
               </div>
             )}
             <div className="flex gap-2 flex-wrap">
-              {content.tags.map((tag) => (
+              {parsedTags.map((tag) => (
                 <span
                   key={tag}
                   className="px-3 py-1 rounded-full bg-gray-800 text-sm text-gray-400"
