@@ -6,16 +6,22 @@ export async function ProfileSection() {
   const profile = await contentService.getProfile();
 
   const formations = Array.isArray(profile.formations)
-  ? profile.formations
-  : typeof profile.formations === "string"
-    ? JSON.parse(profile.formations)
-    : [];
+    ? profile.formations
+    : typeof profile.formations === "string"
+      ? JSON.parse(profile.formations)
+      : [];
 
-  const motivations= Array.isArray(profile.motivations) ? profile.motivations: typeof profile.motivations==="string" ? JSON.parse(profile.motivations) : [];
+  const motivations = Array.isArray(profile.motivations)
+    ? profile.motivations
+    : typeof profile.motivations === "string"
+      ? JSON.parse(profile.motivations)
+      : [];
 
-  const socialLinks= Array.isArray(profile.socialLinks) ? profile.socialLinks: typeof profile.socialLinks==="string" ? JSON.parse(profile.socialLinks) : [];
-
-    
+  const socialLinks = Array.isArray(profile.socialLinks)
+    ? profile.socialLinks
+    : typeof profile.socialLinks === "string"
+      ? JSON.parse(profile.socialLinks)
+      : [];
 
   return (
     <section className="relative overflow-hidden">
@@ -27,14 +33,13 @@ export async function ProfileSection() {
           {/* Profile Image */}
           <div className="relative">
             <div className="w-40 h-40 md:w-52 md:h-52 rounded-full overflow-hidden border-4 border-yellow-500/30 shadow-[0_0_40px_rgba(245,200,60,0.15)] relative">
-              <Image
-                src={"/lib/routes/profil"}
+              <img
+                src="/lib/routes/profil"
                 alt={`${profile.firstName} ${profile.lastName}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 208px"
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
+
             <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
               <span className="text-xl">🎙️</span>
             </div>
@@ -100,13 +105,14 @@ export async function ProfileSection() {
                   {formations.map(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (f: any, i: number) => (
-                    <li
-                      key={i}
-                      className="text-sm text-gray-400 flex items-start gap-2"
-                    >
-                      <span className="text-yellow-500 mt-1">•</span> {f}
-                    </li>
-                  ))}
+                      <li
+                        key={i}
+                        className="text-sm text-gray-400 flex items-start gap-2"
+                      >
+                        <span className="text-yellow-500 mt-1">•</span> {f}
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
 
@@ -120,14 +126,15 @@ export async function ProfileSection() {
                 <ul className="space-y-2">
                   {motivations.map(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (m : any, i:number) => (
-                    <li
-                      key={i}
-                      className="text-sm text-gray-400 flex items-start gap-2"
-                    >
-                      <span className="text-yellow-500 mt-1">•</span> {m}
-                    </li>
-                  ))}
+                    (m: any, i: number) => (
+                      <li
+                        key={i}
+                        className="text-sm text-gray-400 flex items-start gap-2"
+                      >
+                        <span className="text-yellow-500 mt-1">•</span> {m}
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
             </div>

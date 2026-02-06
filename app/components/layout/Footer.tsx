@@ -29,9 +29,16 @@ export function Footer() {
     <footer className="border-t border-gray-700 bg-gradient-to-b from-[#0b0d11] to-[#08090b]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-center md:text-left">
+          <div className="text-center md:text-left space-y-1">
             <p className="text-sm text-gray-400">
               © {new Date().getFullYear()} Podcast. Tous droits réservés.
+            </p>
+            <p className="text-xs text-gray-500">
+              Application développée par{" "}
+              <span className="text-gray-300 font-medium">
+                Steve Bodouin
+              </span>{" "}
+              · Software Engineer
             </p>
           </div>
 

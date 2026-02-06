@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { updateProfileAction } from "@/app/lib/actions";
 import type { Profile } from "@/app/lib/index";
@@ -14,9 +13,8 @@ interface EditProfileFormProps {
 }
 
 export default function EditProfileForm({ profile }: EditProfileFormProps) {
-
   const router = useRouter();
-  
+
   // Normalisation des tableaux venant du backend
 
   function normalizeArray(value: unknown): string[] {
@@ -117,7 +115,7 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
       if (!result.success) {
         console.error("Erreur serveur:", result.error);
       } else {
-         // ⚡ Redirection après succès
+        // ⚡ Redirection après succès
         router.push("/admin/profil");
       }
     } catch (error) {
@@ -136,13 +134,14 @@ export default function EditProfileForm({ profile }: EditProfileFormProps) {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white">Photo de profil</h3>
         <div className="flex items-center gap-6">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300">
-            <Image
+          <div className="relative w-52 h-42 rounded-full overflow-hidden border-2 border-gray-300">
+            <img
               src={previewUrl}
               alt="Photo de profil"
-              fill
-              className="object-cover"
-              onError={() => setPreviewUrl("/lib/routes/profil")}
+              className="object-cover w-full h-full"
+              onError={() =>
+                setPreviewUrl(`/lib/routes/profil?v=${Date.now()}`)
+              }
             />
           </div>
           <input

@@ -1,6 +1,5 @@
 // app/components/ProfileCardServer.tsx
 import Link from "next/link";
-import Image from "next/image";
 import { contentService } from "@/app/lib/contentService";
 
 type SocialLinks = {
@@ -46,12 +45,10 @@ export default async function ProfileCardServer() {
       {/* Banner */}
       <div className="h-48 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 relative">
         {profile.imageUrl && (
-          <Image
+          <img
             src={"/lib/routes/profil"}
             alt={`${profile.firstName} ${profile.lastName}`}
-            fill
-            className="object-cover opacity-30"
-            priority
+            className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
         )}
       </div>
